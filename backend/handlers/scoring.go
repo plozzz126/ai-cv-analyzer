@@ -47,7 +47,6 @@ func ScoreCandidateByID(id int) error {
 		return fmt.Errorf("candidate not found: %w", err)
 	}
 
-	// Отправляем только нужные поля в AI сервис
 	aiReq := AIRequest{
 		ID:         candidate.ID,
 		Name:       candidate.Name,
