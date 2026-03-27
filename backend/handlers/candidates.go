@@ -42,6 +42,10 @@ func CreateCandidate(c *gin.Context) {
 
 	candidate.Status = "pending"
 
+	go func(id int) {
+		ScoreCandidateByID(id)
+	}(candidate.ID)
+
 	c.JSON(http.StatusOK, candidate)
 }
 
