@@ -1,57 +1,92 @@
-сделано от части ии если будут вопросы по беку пишите. 
+Инструкция сделана частично с помощью ии. Если будут вопросы по backend пишите.
 
 # Подключение к backend
 
-Base URL: `https://ai-cv-analyzer-production.up.railway.app`
+Base URL:
+https://ai-cv-analyzer-production.up.railway.app
+
+---
 
 ## Endpoints
 
-| Метод | URL | Что делает |
-|---|---|---|
-| POST | `/candidates` | Создать заявку |
-| GET | `/candidates` | Все кандидаты |
-| GET | `/candidates/:id` | Один кандидат |
-| POST | `/candidates/:id/score` | Запустить AI оценку |
-| POST | `/candidates/:id/approve` | Одобрить |
-| POST | `/candidates/:id/reject` | Отклонить |
-| GET | `/leaderboard` | Топ-10 по score |
+| Метод | URL                       | Описание                                                 |
+| ----- | ------------------------- | -------------------------------------------------------- |
+| POST  | `/candidates`             | Создать кандидата (автоматически запускается AI скоринг) |
+| GET   | `/candidates`             | Получить всех кандидатов                                 |
+| GET   | `/candidates/:id`         | Получить одного кандидата                                |
+| POST  | `/candidates/:id/score`   | Запустить AI оценку вручную                              |
+| POST  | `/candidates/:id/approve` | Одобрить кандидата                                       |
+| POST  | `/candidates/:id/reject`  | Отклонить кандидата                                      |
+| GET   | `/leaderboard`            | Топ-10 кандидатов по score                               |
+
+---
+
+## Пример ответа кандидата
+
+```json
+{
+  "id": 1,
+  "name": "Арман",
+  "age": 18,
+  "status": "pending",
+  "score": null
+}
+```
+
+Статусы:
+pending → scored → approved / rejected
 
 ---
 
 ## AI (Python)
 
-Подними FastAPI на порту **8000**:
+Подними FastAPI на порту 8000
 
-```
+Endpoint:
 POST /score
-```
 
-Получишь:
+Backend отправляет:
+
 ```json
-{ "id": 1, "name": "...", "age": 18, "essay": "...", "experience": "...", "motivation": "..." }
+{
+  "id": 1,
+  "name": "...",
+  "age": 18,
+  "essay": "...",
+  "experience": "...",
+  "motivation": "..."
+}
 ```
 
-Верни строго:
+AI должен вернуть строго:
+
 ```json
-{ "score": 85, "explanation": "...", "ai_detected": false }
+{
+  "score": 85,
+  "explanation": "...",
+  "ai_detected": false
+}
 ```
 
-После деплоя своего сервиса — скинь мне URL, я добавлю в backend переменную AI_SERVICE_URL.
+После деплоя своего сервиса — скинь URL, я подключу его в backend.
+
+
+## Фронтенд (React)
+
+сценарий:
+
+1. POST /candidates — создать кандидата (скоринг запускается автоматически)
+2. GET /candidates — список кандидатов
+3. GET /candidates/:id — детальная страница
+4. POST /candidates/:id/approve или /reject — действия комиссии
+5. GET /leaderboard — топ кандидатов
 
 ---
 
-## Фронтендер (React)
+## Создание кандидата
 
-Типичный флоу:
-```
-1. POST /candidates        → скоринг запускается автоматически
-2. GET  /candidates        → дашборд (статус pending → scored)
-3. GET  /candidates/:id    → детальная страница
-4. POST /candidates/:id/approve или /reject → кнопки комиссии
-5. GET  /leaderboard       → топ-10
-```
+POST /candidates
 
-Поля для POST /candidates:
 ```json
 {
   "name": "Арман",
@@ -61,5 +96,3 @@ POST /score
   "motivation": "мотивация..."
 }
 ```
-
-Статусы: `pending → scored → approved / rejected`
