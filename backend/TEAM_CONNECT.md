@@ -1,12 +1,13 @@
-Сделал с помощью ии, если будут вопросы пишите
+сделано от части ии если будут вопросы по беку пишите. 
 
 # Подключение к backend
 
-Base URL: `http://localhost:8080`
+Base URL: `https://ai-cv-analyzer-production.up.railway.app`
 
-Endpoints
+## Endpoints
 
 | Метод | URL | Что делает |
+|---|---|---|
 | POST | `/candidates` | Создать заявку |
 | GET | `/candidates` | Все кандидаты |
 | GET | `/candidates/:id` | Один кандидат |
@@ -15,10 +16,11 @@ Endpoints
 | POST | `/candidates/:id/reject` | Отклонить |
 | GET | `/leaderboard` | Топ-10 по score |
 
+---
 
-AI (Python)
+## AI (Python)
 
-Подними FastAPI на порту **8000** с одним endpoint:
+Подними FastAPI на порту **8000**:
 
 ```
 POST /score
@@ -34,18 +36,30 @@ POST /score
 { "score": 85, "explanation": "...", "ai_detected": false }
 ```
 
+После деплоя своего сервиса — скинь мне URL, я добавлю в backend переменную AI_SERVICE_URL.
+
 ---
 
 ## Фронтендер (React)
 
 Типичный флоу:
 ```
-1. POST /candidates → получаешь id
-2. POST /candidates/:id/score → AI оценивает
-3. GET /candidates → показываешь дашборд
+1. POST /candidates        → скоринг запускается автоматически
+2. GET  /candidates        → дашборд (статус pending → scored)
+3. GET  /candidates/:id    → детальная страница
 4. POST /candidates/:id/approve или /reject → кнопки комиссии
+5. GET  /leaderboard       → топ-10
 ```
 
-Поля кандидата: `name, age, essay, experience, motivation` — все обязательные.
+Поля для POST /candidates:
+```json
+{
+  "name": "Арман",
+  "age": 18,
+  "essay": "текст эссе...",
+  "experience": "опыт...",
+  "motivation": "мотивация..."
+}
+```
 
 Статусы: `pending → scored → approved / rejected`
