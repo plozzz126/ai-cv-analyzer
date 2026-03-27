@@ -1,0 +1,270 @@
+деплой планирую делать на Render. 
+
+# 🚀 inVision U — Инструкции для команды
+
+---
+
+## 📁 Структура проекта
+
+```
+invision-screening/
+├── backend/        ← Go + Gin (Арман)
+├── ai-service/     ← Python + FastAPI (AI разработчик)
+└── frontend/       ← React (фронтендер)
+```
+
+---
+
+## 🔵 Для AI разработчика (Python)
+
+### Установка
+```bash
+pip install fastapi uvicorn google-generativeai python-dotenv pydantic
+```
+
+### Файл .env
+```
+GEMINI_API_KEY=твой_ключ
+PORT=8000
+```
+
+### Что придёт от backend (входящий JSON)
+```json
+{
+  "id": 1,
+  "name": "Арман",
+  "age": 18,
+  "essay": "Я хочу изменить мир потому что...",
+  "experience": "Участвовал в олимпиадах, волонтёрство",
+  "motivation": "Хочу стать предпринимателем"
+}
+```
+
+### Что нужно вернуть (СТРОГО такой формат!)
+```json
+{
+  "score": 85,
+  "explanation": "Кандидат демонстрирует высокий лидерский потенциал...",
+  "ai_detected": false
+}
+```
+- `score` — число от 0 до 100
+- `explanation` — строка, объяснение для комиссии
+- `ai_detected` — true/false, написано ли эссе AI
+
+### Минимальный main.py
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+from dotenv import load_dotenv
+import google.generativeai as genai
+import os, json, re
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+app = FastAPI()
+
+class Candidate(BaseModel):
+    id: int
+    name: str
+    age: int
+    essay: str
+    experience: str
+    motivation: str
+
+@app.post("/score")
+async def score(candidate: Candidate):
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    # СКОРИНГ
+    scoring_prompt = f"""
+Ты эксперт по отбору студентов в инновационный университет inVision U.
+Оцени кандидата. Верни ТОЛЬКО JSON без markdown и без ```json.
+
+Данные:
+Имя: {candidate.name}
+Возраст: {candidate.age}
+Эссе: {candidate.essay}
+Опыт: {candidate.experience}
+Мотивация: {candidate.motivation}
+
+Верни JSON:
+{{
+  "leadership": 0-10,
+  "growth": 0-10,
+  "authenticity": 0-10,
+  "communication": 0-10,
+  "total": число от 0 до 100,
+  "explanation": "2-3 предложения почему такая оценка на русском",
+  "strengths": ["сильная сторона 1", "сильная сторона 2"],
+  "concerns": ["риск 1"]
+}}
+"""
+
+    # AI ДЕТЕКТОР
+    ai_prompt = f"""
+Проанализируй текст на признаки написания AI (ChatGPT/Claude).
+Текст: {candidate.essay}
+
+Верни ТОЛЬКО JSON без markdown:
+{{
+  "ai_probability": 0.0-1.0,
+  "verdict": "human" или "ai"
+}}
+"""
+
+    try:
+        score_resp = model.generate_content(scoring_prompt)
+        score_text = score_resp.text.strip()
+        score_data = json.loads(score_text)
+
+        ai_resp = model.generate_content(ai_prompt)
+        ai_text = ai_resp.text.strip()
+        ai_data = json.loads(ai_text)
+
+        return {
+            "score": score_data.get("total", 50),
+            "explanation": score_data.get("explanation", ""),
+            "ai_detected": ai_data.get("verdict") == "ai"
+        }
+
+    except Exception as e:
+        return {
+            "score": 50,
+            "explanation": f"Ошибка анализа: {str(e)}",
+            "ai_detected": False
+        }
+```
+
+### Запуск
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Проверка что работает
+```bash
+curl -X POST http://localhost:8000/score \
+  -H "Content-Type: application/json" \
+  -d '{"id":1,"name":"Тест","age":18,"essay":"Я хочу учиться","experience":"школа","motivation":"интерес"}'
+```
+
+---
+
+## 🎨 Для фронтендера (React)
+
+### Base URL
+```
+http://localhost:8080
+```
+
+### Все endpoints
+
+| Метод | URL | Описание |
+|---|---|---|
+| POST | `/candidates` | Создать заявку кандидата |
+| GET | `/candidates` | Список всех кандидатов |
+| GET | `/candidates/:id` | Детали кандидата |
+| POST | `/candidates/:id/score` | Запустить AI оценку |
+| POST | `/candidates/:id/approve` | Одобрить кандидата |
+| POST | `/candidates/:id/reject` | Отклонить кандидата |
+| GET | `/leaderboard` | Топ-10 по score |
+
+### Форма заявки — что отправлять
+```javascript
+// POST /candidates
+const response = await fetch('http://localhost:8080/candidates', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: "Арман Сейтов",      // обязательно
+    age: 18,                    // обязательно
+    essay: "текст эссе...",     // обязательно
+    experience: "олимпиады...", // обязательно
+    motivation: "хочу стать..." // обязательно
+  })
+});
+const candidate = await response.json();
+// candidate.id — сохрани, нужен для следующего шага
+```
+
+### После создания — сразу запустить AI оценку
+```javascript
+// POST /candidates/:id/score
+const scored = await fetch(`http://localhost:8080/candidates/${candidate.id}/score`, {
+  method: 'POST'
+});
+const result = await scored.json();
+// result.score — итоговый балл
+// result.explanation — объяснение от AI
+// result.ai_detected — true если эссе написано AI
+// result.status — станет 'scored'
+```
+
+### Список кандидатов для дашборда
+```javascript
+// GET /candidates
+const res = await fetch('http://localhost:8080/candidates');
+const candidates = await res.json();
+// Каждый объект содержит:
+// { id, name, age, essay, experience, motivation,
+//   score, explanation, ai_detected, status, created_at }
+```
+
+### Одобрить / отклонить (human-in-the-loop)
+```javascript
+// Одобрить
+await fetch(`http://localhost:8080/candidates/${id}/approve`, { method: 'POST' });
+
+// Отклонить  
+await fetch(`http://localhost:8080/candidates/${id}/reject`, { method: 'POST' });
+```
+
+### Статусы кандидата
+| Статус | Значение |
+|---|---|
+| `pending` | Только подал заявку |
+| `scored` | AI оценил |
+| `approved` | Комиссия одобрила |
+| `rejected` | Комиссия отклонила |
+
+### Что показать в UI
+1. **Страница кандидата** — форма с полями name, age, essay, experience, motivation
+2. **Дашборд комиссии** — таблица со всеми кандидатами, score, статус, кнопки approve/reject
+3. **Детальная страница** — все данные + explanation от AI + флаг ai_detected
+4. **Лидерборд** — топ-10 по score
+
+---
+
+## 🚀 Порядок запуска всего проекта
+
+```bash
+# 1. PostgreSQL должен быть запущен
+
+# 2. AI сервис (Python)
+cd ai-service
+uvicorn main:app --port 8000
+
+# 3. Backend (Go) — в новом терминале
+cd backend
+go run main.go
+
+# 4. Frontend (React) — в новом терминале
+cd frontend
+npm start
+```
+
+Проверка что всё работает
+
+```bash
+# Создать кандидата
+curl -X POST http://localhost:8080/candidates \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Арман","age":18,"essay":"Я лидер","experience":"олимпиады","motivation":"бизнес"}'
+
+# Запустить скоринг (подставь id из предыдущего ответа)
+curl -X POST http://localhost:8080/candidates/1/score
+
+# Получить результат
+curl http://localhost:8080/candidates/1
+```
