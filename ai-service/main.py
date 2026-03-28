@@ -11,14 +11,12 @@ import json
 import logging
 import re
 
-# ================= LOGGING =================
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# ================= ENV =================
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -28,7 +26,6 @@ MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY is not set in environment variables")
 
-# ================= DB =================
 engine = create_engine(
     DB_URL,
     client_encoding="utf8",
@@ -60,7 +57,6 @@ def get_db():
     finally:
         db.close()
 
-# ================= APP =================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application startup")
@@ -76,7 +72,6 @@ app = FastAPI(
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-# ================= PROMPT =================
 SYSTEM_PROMPT = """
 Ты — эксперт по отбору кандидатов.
 
@@ -104,7 +99,6 @@ SYSTEM_PROMPT = """
 }
 """.strip()
 
-# ================= SCHEMAS =================
 class CandidateRequest(BaseModel):
     user_id: str
     text: str
@@ -156,7 +150,6 @@ class InterviewQuestionResponse(BaseModel):
     question: str
 
 
-# ========== SCHEMA ДЛЯ GO BACKEND ==========
 class ScoreRequest(BaseModel):
     id: int
     name: str
@@ -172,7 +165,6 @@ class ScoreResponse(BaseModel):
     ai_detected: bool
 
 
-# ================= IN-MEMORY INTERVIEW STATE =================
 interviews: dict[str, dict] = {}
 
 QUESTIONS: list[str] = [
@@ -182,7 +174,6 @@ QUESTIONS: list[str] = [
     "Почему ты хочешь учиться в inVision U?",
 ]
 
-# ================= UTILS =================
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
@@ -219,14 +210,12 @@ def save_messages(db: Session, user_id: str, role: str, content: str) -> None:
     db.commit()
 
 
-# ================= ROUTES =================
 
 @app.get("/health", tags=["System"])
 def health():
     return {"status": "ok"}
 
 
-# ========== ГЛАВНЫЙ ENDPOINT ДЛЯ GO BACKEND ==========
 @app.post("/score", response_model=ScoreResponse, tags=["Scoring"])
 def score(req: ScoreRequest, db: Session = Depends(get_db)):
     """
