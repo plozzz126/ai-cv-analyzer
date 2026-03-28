@@ -13,14 +13,14 @@ https://ai-cv-analyzer-production.up.railway.app
 ```
 POST /candidates
 ```
-Body:
+Body (все поля обязательные!):
 ```json
 {
-  "name": "Арман",
-  "age": 18,
-  "essay": "текст эссе...",
-  "experience": "опыт...",
-  "motivation": "мотивация..."
+  "name": "Арман",        // string
+  "age": 18,              // number
+  "essay": "текст...",    // string
+  "experience": "опыт...",// string
+  "motivation": "..."     // string
 }
 ```
 Ответ — объект кандидата с `id`. Скоринг запускается **автоматически** в фоне, ждать не нужно.
